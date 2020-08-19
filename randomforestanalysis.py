@@ -13,6 +13,8 @@ from scipy.stats import norm
 from sklearn.inspection import permutation_importance
 import multiprocessing as mp
 
+"Author: Nils Haug, 2020"
+
 def feature_ranking(permutation_importance,sd=np.inf):
 
     permutation_importance = permutation_importance.drop("Rank",axis=1).reset_index()[["Measure","mean_Delta","std_Delta"]]
