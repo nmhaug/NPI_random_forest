@@ -294,10 +294,6 @@ class RandomForestAnalysis(object):
             results = results.append(pd.concat(newres))
 
         self.cv_results = results
-
-
-    
-        
         
     def get_performance(self):
     
@@ -516,11 +512,12 @@ class RandomForestAnalysis(object):
         r                  = kwargs.get('max_samples',3/4)
         n_repeats          = kwargs.get('n_repeats',10)
 
-        epi_age = self.get_epidemic_age(min_casecount=mincount)
+        epi_age = self.get_epidemic_age(min_casecount=mincount).loc[(countries)]
         
-        X = self.predictors
-        y = self.outcome
-        std_y = self.data[["Std(R)"]]
+        X = self.predictors.loc[(countries)].copy()
+        y = self.outcome.loc[(countries)].copy()
+
+        breakpoint()
         
         X,y = shift_outcome(X,y,s,shift_date="X")
         X,y = cut_dates(X,y,self._enddate+timedelta(days=s))
@@ -535,7 +532,6 @@ class RandomForestAnalysis(object):
         std_y_predict = predictions.std(axis=0)
         
         results = y
-        results['Std(R)'] = std_y 
         results['R_predict'] = y_predict
         results['Std(R)_predict'] = std_y_predict
         results = results.join(epi_age,how='right')
@@ -560,8 +556,3 @@ class RandomForestAnalysis(object):
     #     X,y = cut_dates(X,y,self._enddate+timedelta(days=s))
 
     #     X1 = X.query
-
-
-
-
-
