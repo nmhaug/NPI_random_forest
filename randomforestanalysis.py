@@ -535,6 +535,7 @@ class RandomForestAnalysis(object):
         results = results.join(epi_age,how='right')
         results.index = results.index.droplevel("Date")
         results = results.set_index('Epidemic age',append=True).unstack(level=1)
+        results.columns = results.columns.droplevel(0)
 
         return results
 
