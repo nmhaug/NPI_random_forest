@@ -516,8 +516,6 @@ class RandomForestAnalysis(object):
         
         X = self.predictors.loc[(countries)].copy()
         y = self.outcome.loc[(countries)].copy()
-
-        breakpoint()
         
         X,y = shift_outcome(X,y,s,shift_date="X")
         X,y = cut_dates(X,y,self._enddate+timedelta(days=s))
