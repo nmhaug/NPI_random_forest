@@ -13,7 +13,7 @@ from scipy.stats import norm
 from sklearn.inspection import permutation_importance
 import multiprocessing as mp
 
-"Author: Nils Haug, 2020"
+"Author: N Haug, 2020"
 
 def feature_ranking(permutation_importance,sd=np.inf):
 
@@ -85,71 +85,13 @@ def compute_performance_metrics(s,m,d,n,n_estimators,maxsamples,nsplits,X,y,endd
 
     return results
 
-
-def fit(X,y,enddate,**kwargs):
-    
-    min_samples_leaf    = kwargs.get('min_samples_leaf',1)
-    max_depth           = kwargs.get('max_depth',None)
-    timeshift           = kwargs.get('time_shift',0)
-    maxfeatures         = kwargs.get('max_features',1/3)
-    n_estimators        = kwargs.get('n_estimators',500)
-    
-    X,y = shift_outcome(X,y,timeshift)
-    X,y = cut_dates(X,y,enddate)
-    
-    return RandomForestRegressor(
-                        min_samples_leaf=min_samples_leaf,
-                        max_depth=max_depth,
-                        max_features=maxfeatures,
-                        n_estimators=n_estimators,
-                ).fit(X.values,y.values.ravel())
-
-
-def get_L1_ranking(ranking,scorename,variant="naive"):
-
-    if variant == "naive":
-
-        L1_ranking = ranking[[scorename,"L1"]].groupby("L1").sum().sort_values(scorename,ascending=True)
-        L1_ranking["Rank"] = np.arange(1,L1_ranking.shape[0]+1)
-
-        return L1_ranking
-
-    elif variant == "top_5":
-
-        L1_ranking = ranking[[scorename,"L1"]].sort_values(scorename,ascending=True).groupby("L1").head(5).groupby("L1").sum()
-        L1_ranking = L1_ranking.sort_values(scorename)
-        L1_ranking["Rank"] = np.arange(1,L1_ranking.shape[0]+1)
-
-        return L1_ranking       
-
-    elif variant == "rank_weighted":
-
-        ranking = ranking.sort_values(scorename,ascending=True)
-        ranking["Rank"] = np.arange(1,ranking.shape[0]+1)
-        ranking[scorename+'/Rank'] = ranking[scorename]/ranking['Rank']
-        L1_ranking = ranking[[scorename+'/Rank',"L1"]].groupby("L1").sum().sort_values(scorename+'/Rank',ascending=True)
-        L1_ranking["Rank"] = np.arange(1,L1_ranking.shape[0]+1)
-        
-        return L1_ranking
-
-def get_msd(x):
-    if x==0:
-        return 0
-    elif x>0:
-        return int(np.floor(x / (10**np.floor(np.log10(x)))))
-    elif x<0:
-        return int(np.floor(x / (10**np.floor(np.log10(-x))))) 
-
 def round2msd(x,k):
     if x==0:
         return int(0)
-    elif x>=1:
+    elif abs(x)>=1:
         return int(np.round(x))
-    elif x>0 and x<1 :
-        nks = int(-np.floor(np.log10(x)))
-        return np.around(x,nks+k-1)
-    elif x<0:
-        nks = int(-np.floor(np.log10(-x)))
+    else:
+        nks = int(-np.floor(np.log10(abs(x))))
         return np.around(x,nks+k-1)
     
 def shift_outcome(X,y,s,shift_date="y"):
@@ -281,9 +223,8 @@ class RandomForestAnalysis(object):
         
             m = p[0]
             d = p[1]
-            n = p[2]
-        
-            # (s,m,d,n,n_estimators,maxsamples,n_splits,X,y,enddate,countries):
+            n = p[2]        
+            
             args = list(map(lambda s: (s,m,d,n,n_estimators,maxsamples,nsplits,X,y,enddate,countries),t))
 
             pool = mp.Pool(processes=n_processes)
@@ -482,8 +423,7 @@ class RandomForestAnalysis(object):
                     'std_Delta':[std]
                 }))
 
-        permutation_scores = permutation_scores.sort_values('mean_Delta',ascending=False)
-        # leave_out_scores['95$\%$CI'] = leave_out_scores['SE'].apply(lambda x: round2msd(norm.ppf(0.975)*x,1))
+        permutation_scores = permutation_scores.sort_values('mean_Delta',ascending=False)        
         permutation_scores["Rank"] = np.arange(1,permutation_scores.shape[0]+1)
         permutation_scores = permutation_scores.set_index("Rank",drop=False)
         permutation_scores['timeshift'] = s
@@ -516,7 +456,7 @@ class RandomForestAnalysis(object):
         
         X = self.predictors.loc[(countries)].copy()
         y = self.outcome.loc[(countries)].copy()
-        
+        l
         X,y = shift_outcome(X,y,s,shift_date="X")
         X,y = cut_dates(X,y,self._enddate+timedelta(days=s))
 
@@ -534,24 +474,33 @@ class RandomForestAnalysis(object):
         results['Std(R)_predict'] = std_y_predict
         results = results.join(epi_age,how='right')
         results.index = results.index.droplevel("Date")
-        results = results.set_index('Epidemic age',append=True).unstack(level=1)
-        results.columns = results.columns.droplevel(0)
+        results = results.set_index('Epidemic age',append=True)
 
         return results
 
-    # def get_Delta(self,featurename,**kwargs):
+def get_L1_ranking(ranking,scorename,variant="naive"):
 
-    #     s                  = kwargs.get('time_shift',0)
-    #     d                  = kwargs.get('max_depth',None)
-    #     m                  = kwargs.get('min_samples_leaf',1)
-    #     n                  = kwargs.get('max_features',1/3)
-    #     r                  = kwargs.get('max_samples',3/4)
+    if variant == "naive":
 
-    #     X = self.predictors
-    #     y = self.outcome
-    #     std_y = self.data[["Std(R)"]]
+        L1_ranking = ranking[[scorename,"L1"]].groupby("L1").sum().sort_values(scorename,ascending=True)
+        L1_ranking["Rank"] = np.arange(1,L1_ranking.shape[0]+1)
+
+        return L1_ranking
+
+    elif variant == "top_5":
+
+        L1_ranking = ranking[[scorename,"L1"]].sort_values(scorename,ascending=True).groupby("L1").head(5).groupby("L1").sum()
+        L1_ranking = L1_ranking.sort_values(scorename)
+        L1_ranking["Rank"] = np.arange(1,L1_ranking.shape[0]+1)
+
+        return L1_ranking       
+
+    elif variant == "rank_weighted":
+
+        ranking = ranking.sort_values(scorename,ascending=True)
+        ranking["Rank"] = np.arange(1,ranking.shape[0]+1)
+        ranking[scorename+'/Rank'] = ranking[scorename]/ranking['Rank']
+        L1_ranking = ranking[[scorename+'/Rank',"L1"]].groupby("L1").sum().sort_values(scorename+'/Rank',ascending=True)
+        L1_ranking["Rank"] = np.arange(1,L1_ranking.shape[0]+1)
         
-    #     X,y = shift_outcome(X,y,s,shift_date="X")
-    #     X,y = cut_dates(X,y,self._enddate+timedelta(days=s))
-
-    #     X1 = X.query
+        return L1_ranking
